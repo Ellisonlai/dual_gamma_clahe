@@ -7,7 +7,7 @@ def calculate_tv(image: np.ndarray) -> float:
     return float(np.sum(dx) + np.sum(dy)) / image.size
 
 def calculate_ambe(original: np.ndarray, enhanced: np.ndarray) -> float:
-    return float(abs(original.mean() - enhanced.mean()))
+    return float(abs(original.mean() - enhanced.mean())) / 255
 
 def calculate_eme(image: np.ndarray, k1=8, k2=8, c=1e-4) -> float:
     h, w = image.shape
