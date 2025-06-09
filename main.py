@@ -39,7 +39,7 @@ def process_images(input_dir, output_dir, method, save_compare=False):
             continue
         enhanced_dict = {}
         if method == "all":
-            for m in ["dual_gamma_clahe", "proposed", "clahe", "he"]:
+            for m in method_map.keys():
                 enhanced = method_map[m](image.copy())
                 out_name = f"{m}_{filename}"
                 out_path = os.path.join(output_dir, out_name)
