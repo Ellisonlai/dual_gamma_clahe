@@ -113,7 +113,7 @@ def clahe_rgb(image: np.ndarray, clipLimit: float = 2.0, tileGridSize: tuple = (
     return result
 
 def clahe_rgb_all(image: np.ndarray, clipLimit: float = 2.0, tileGridSize: tuple = (32, 32)) -> np.ndarray:
-    """RGB version of CLAHE using TFB channel"""
+    """RGB version of CLAHE using all channels"""
     if image.ndim != 3:
         raise ValueError("Input image must be RGB (3 channels)")
     
