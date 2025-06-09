@@ -4,7 +4,11 @@ import cv2
 import pandas as pd
 import matplotlib.pyplot as plt
 from dg_clahe import dual_gamma_clahe
-from enhance_methods import clahe, he, proposed, evaluate_all
+from dg_clahe_rgb import dual_gamma_clahe_rgb
+from enhance_methods import clahe, he, proposed, evaluate_all, he_rgb, clahe_rgb, clahe_rgb_all
+from skimage import io
+
+
 
 def save_comparison_figure(original, enhanced_dict, filename, output_dir="output"):
     fig, axes = plt.subplots(1, len(enhanced_dict)+1, figsize=(5*(len(enhanced_dict)+1), 4))
@@ -19,16 +23,36 @@ def save_comparison_figure(original, enhanced_dict, filename, output_dir="output
     plt.savefig(out_path)
     plt.close()
 
-def process_images(input_dir, output_dir, method, save_compare=False):
+def process_images(input_dir, output_dir, method, save_compare=False, color_space="all"):
+    """
+    color space: 'gray' or 'rgb' or 'all'
+    """
     os.makedirs(output_dir, exist_ok=True)
     results = []
     img_extensions = ('.jpg', '.jpeg', '.png', '.bmp')
-    method_map = {
+
+    gray_map = {
         "dual_gamma_clahe": dual_gamma_clahe,
         "proposed": proposed,
         "clahe": clahe,
-        "he": he
+        "he": he,
     }
+    rgb_map = {
+        "he_rgb": he_rgb,
+        "clahe_rgb": clahe_rgb,
+        "clahe_rgb_all": clahe_rgb_all,
+        "dual_gamma_clahe_rgb": dual_gamma_clahe_rgb,
+    }
+    method_map = {}
+
+    if color_space == "gray":
+        method_map.update(gray_map)
+    elif color_space == "rgb":
+        method_map.update(rgb_map)
+    elif color_space == "all":
+        method_map.update(gray_map)
+        method_map.update(rgb_map)
+
     for filename in os.listdir(input_dir):
         if not filename.lower().endswith(img_extensions):
             continue
@@ -40,9 +64,19 @@ def process_images(input_dir, output_dir, method, save_compare=False):
         enhanced_dict = {}
         if method == "all":
             for m in method_map.keys():
-                enhanced = method_map[m](image.copy())
                 out_name = f"{m}_{filename}"
                 out_path = os.path.join(output_dir, out_name)
+                scores = {}
+
+                if m == "dual_gamma_clahe_rgb":
+                    image = io.imread(img_path)
+                    enhanced = method_map[m](image.copy())
+                    io.imsave(out_path, enhanced)
+                else:
+                    enhanced = method_map[m](image.copy())
+                    cv2.imwrite(out_path, enhanced)
+                
+                enhanced = cv2.imread(out_path)
                 cv2.imwrite(out_path, enhanced)
                 scores = evaluate_all(image, enhanced)
                 scores["Image"] = filename
@@ -76,8 +110,9 @@ def main():
     parser.add_argument("--output_dir", default="output", help="Output folder")
     parser.add_argument("--method", default="all", choices=["dual_gamma_clahe", "proposed", "clahe", "he", "all"], help="Enhancement method")
     parser.add_argument("--compare", action="store_true", help="Save comparison figure")
+    parser.add_argument("--color_space", default="all", choices=["gray", "rgb", "all"], help="Color space")
     args = parser.parse_args()
-    process_images(args.input_dir, args.output_dir, args.method, args.compare)
+    process_images(args.input_dir, args.output_dir, args.method, args.compare, args.color_space)
 
 if __name__ == "__main__":
     main()

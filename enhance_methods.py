@@ -15,7 +15,7 @@ def calculate_tv(image: np.ndarray) -> float:
 def calculate_ambe(original: np.ndarray, enhanced: np.ndarray) -> float:
     return float(abs(original.mean() - enhanced.mean())) / 255
 
-def calculate_eme(image: np.ndarray, k1=8, k2=8, c=1e-4) -> float:
+def calculate_eme(image: np.ndarray, k1=32, k2=32, c=1e-4) -> float:
     h, w = image.shape
     block_h, block_w = h // k1, w // k2
     eme = 0
@@ -79,4 +79,52 @@ def proposed(image: np.ndarray, gamma_dark: float = 0.7, gamma_bright: float = 1
     fused_uint8 = (fused * 255).astype(np.uint8)
     clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
     result = clahe.apply(fused_uint8)
+    return result
+
+def he_rgb(image: np.ndarray) -> np.ndarray:
+    """RGB version of histogram equalization using HSV V channel"""
+    if image.ndim != 3:
+        raise ValueError("Input image must be RGB (3 channels)")
+    
+    # Convert BGR to HSV
+    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    
+    # Apply histogram equalization to V channel
+    hsv[:, :, 2] = cv2.equalizeHist(hsv[:, :, 2])
+    
+    # Convert back to BGR
+    result = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
+    return result
+
+def clahe_rgb(image: np.ndarray, clipLimit: float = 2.0, tileGridSize: tuple = (32, 32)) -> np.ndarray:
+    """RGB version of CLAHE using HSV V channel"""
+    if image.ndim != 3:
+        raise ValueError("Input image must be RGB (3 channels)")
+    
+    # Convert BGR to HSV
+    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    
+    # Apply CLAHE to V channel
+    clahe_obj = cv2.createCLAHE(clipLimit=clipLimit, tileGridSize=tileGridSize)
+    hsv[:, :, 2] = clahe_obj.apply(hsv[:, :, 2])
+    
+    # Convert back to BGR
+    result = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
+    return result
+
+def clahe_rgb_all(image: np.ndarray, clipLimit: float = 2.0, tileGridSize: tuple = (32, 32)) -> np.ndarray:
+    """RGB version of CLAHE using TFB channel"""
+    if image.ndim != 3:
+        raise ValueError("Input image must be RGB (3 channels)")
+    
+    # Convert BGR to TFB (TensorFlow BGR to RGB)
+    tfb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    
+    # Apply CLAHE to each channel
+    clahe_obj = cv2.createCLAHE(clipLimit=clipLimit, tileGridSize=tileGridSize)
+    for i in range(3):
+        tfb[:, :, i] = clahe_obj.apply(tfb[:, :, i])
+    
+    # Convert back to BGR
+    result = cv2.cvtColor(tfb, cv2.COLOR_RGB2BGR)
     return result
