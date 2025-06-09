@@ -1,65 +1,90 @@
-## Automatic Contrast-Limited Adaptive Histogram Equalization With Dual Gamma Correction
+# Dual Gamma CLAHE & Image Enhancement Toolkit
 
-This is the implementation in python of the algorithm of the paper `Automatic Contrast-Limited Adaptive Histogram
-Equalization With Dual Gamma Correction` [link here](https://ieeexplore.ieee.org/document/8269243). This is not an official repository. In the algorithm we use the HSV color space 
-and specifically the V channel to equalize our images. The algorithm works with grayscale images as well. The proper selection of 
-parameters is important in order to get a good result in RGB and Gray images. Before we process the image, we pad the image with the 
-reflection. Reflection, reflects the columns and rows at the sides of the image. The rationale behind this approach, is that the blocks 
-might not fit in the image properly. Thus, either we had to crop the image or pad and then return the original image size. The first approach could 
-have affect our results. Vectorization methods were applied where possible. The algorithm spans across 2 double for loops, in the first one we process 
-the image in blocks, where we calculate each block's histograms and all the necessary parameters. This loop instead of running it per pixel taking O(WxH) where 
-W and H are the width and height of image respectively; it takes O(kxl) where kxl is the amount of fitted blocks per image dimension. The second step is the bilinear interpolation 
-of pixels. Because we process the image per block, some pixels which rely on the boundaries of the blocks may have quite different values that create artifacts. To address this problem 
-we apply bilinear interpolation where the value of each pixel is interpolated among the values of 4 blocks. 
+This project implements and extends the algorithm from the paper:
 
-## Prerequisites
-Create your environment and install the dependencies required for this project.
+> **Automatic Contrast-Limited Adaptive Histogram Equalization With Dual Gamma Correction**  
+> [IEEE Xplore Link](https://ieeexplore.ieee.org/document/8269243)
 
-```commandline
-python3 -m venv env
+---
+
+## Features
+
+- **Dual Gamma CLAHE** (paper method, robust block-based, YUV/gray)
+- **Proposed (dual gamma+CLAHE)**, **OpenCV CLAHE**, **Histogram Equalization (HE)**
+- **Batch processing**: Enhance all images in a folder
+- **Robust evaluation metrics**: TV, AMBE, EME, CQE
+- **Visual comparison**: Auto-generate comparison figures for all methods
+- **Flexible CLI**: Choose method, batch/single, output, and comparison
+
+---
+
+## Installation
+
+1. 建立虛擬環境並安裝依賴：
+
+```bash
+python -m venv env
+# Windows:
+./env/Scripts/activate
+# macOS/Linux:
 source env/bin/activate
-pip install pip --upgrade
 pip install -r requirements.txt
 ```
 
-To execute the algorithm run the `main.py` script. Running the main function with the -h flag 
-you can get the list of arguments that you can pass to the main. You pass all the necessary arguments 
-noted here in order to run the algorithm. 
+---
 
-``` 
-usage: main.py [-h] [--kernel KERNEL] [--alpha ALPHA] [--delta DELTA] [--p P]
-               [--show] [--out OUT]
-               image
+## Usage
 
-positional arguments:
-  image            The image path
+批次處理 `images` 資料夾下所有圖片，並產生增強結果、評估指標與比較圖：
 
-optional arguments:
-  -h, --help       show this help message and exit
-  --kernel KERNEL  Size of the kernel, if int then its (height, width)
-  --alpha ALPHA    Alpha parameter of the algorithm
-  --delta DELTA    The Delta threshold of the algorithm
-  --p P            The factor for the computation of clip limits
-  --show           Display the 2 figures with matplotlib, before and after
-                   equalization
-  --out OUT        Output directory of the equalized image. Default folder is
-                   the ./images folder
-
+```bash
+python main.py --input_dir images --output_dir output --method all --compare
 ```
 
-## Running 
+- `--method` 可選：`dual_gamma_clahe`、`proposed`、`clahe`、`he`、`all`
+- `--compare` 會自動產生原圖+各方法結果的比較圖
 
-`python main.py ./images/streets_gray.jpg --kernel 32,32 --alpha 40 --delta 50 --p 1.5 --show`
+### 只處理單一方法
 
+```bash
+python main.py --input_dir images --output_dir output --method dual_gamma_clahe
+```
 
-`python main.py ./images/streets.jpg --kernel 32,32 --alpha 40 --delta 50 --p 1.5 --show`
+### 參數說明
 
-`python main.py ./images/building.jpg --kernel 32,32 --alpha 40 --delta 50 --p 1.5 --show`
+- `--input_dir`：輸入圖片資料夾
+- `--output_dir`：輸出結果資料夾
+- `--method`：增強方法（`dual_gamma_clahe`/`proposed`/`clahe`/`he`/`all`）
+- `--compare`：是否產生比較圖
+
+---
 
 ## Results
 
-> RGB Example
-<img src="./plots/eq_streets.png" width="720"/>
+- 增強後圖片與比較圖會存於 `output` 資料夾
+- 評估指標（TV, AMBE, EME, CQE）會自動輸出成 `results.csv`
 
-> Grayscale Example
-<img src="./plots/eq_streets_gray.png" width="720"/>
+---
+
+## Reference
+
+本專案核心演算法基於：
+
+> **Automatic Contrast-Limited Adaptive Histogram Equalization With Dual Gamma Correction**  
+> [IEEE Xplore Link](https://ieeexplore.ieee.org/document/8269243)
+
+如需引用，請引用原論文。
+
+---
+
+## Example Output
+
+> Comparison Example
+>
+> ![](./output/Comparison_example.png)
+
+---
+
+## Contact
+
+有任何問題或建議，歡迎開 issue 或聯絡作者。

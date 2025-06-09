@@ -1,104 +1,83 @@
 import os
 import argparse
-from skimage import io
-from dg_clahe import dual_gamma_clahe
+import cv2
+import pandas as pd
 import matplotlib.pyplot as plt
-from typing import List
+from dg_clahe import dual_gamma_clahe
+from enhance_methods import clahe, he, proposed, evaluate_all
 
+def save_comparison_figure(original, enhanced_dict, filename, output_dir="output"):
+    fig, axes = plt.subplots(1, len(enhanced_dict)+1, figsize=(5*(len(enhanced_dict)+1), 4))
+    methods = ["Original"] + list(enhanced_dict.keys())
+    images = [original] + [enhanced_dict[m] for m in enhanced_dict]
+    for ax, img, title in zip(axes, images, methods):
+        ax.imshow(img, cmap='gray', vmin=0, vmax=255)
+        ax.set_title(title)
+        ax.axis('off')
+    out_path = os.path.join(output_dir, f"Comparison_{filename}.png")
+    plt.tight_layout()
+    plt.savefig(out_path)
+    plt.close()
 
-def parse_kernel(input_list: str) -> List:
-    if "," not in input_list:
-        raise ValueError(f"No , seperation for kernel values")
-    input_list = input_list.split(",")
-    input_list = [int(i.strip()) for i in input_list]
-    if len(input_list) > 2:
-        raise ValueError(
-            f"kernel should be either int or a sequence of 2 ints but got {input}"
-        )
-    if len(input_list) == 1:
-        return input_list[0], input_list[1]
-    else:
-        return input_list
-
-
-def file_exists(file_):
-    if not os.path.exists(file_):
-        raise ValueError(f"Image file not found {file_}")
-
-
-def check_folder(folder):
-    if os.path.isfile(folder):
-        raise ValueError(
-            f"Output directory is an existing file {folder}, please set a folder here or leave it default."
-        )
-    elif not os.path.isdir(folder):
-        os.makedirs(folder)
-    return folder
-
-
-def parse_arguments():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("image", help="The image path", type=str)
-    parser.add_argument(
-        "--kernel",
-        help="Size of the kernel, if int then its (height, width)",
-        type=parse_kernel,
-        default=[32, 32],
-    )
-    parser.add_argument(
-        "--alpha", help="Alpha parameter of the algorithm", type=float, default=40
-    )
-    parser.add_argument(
-        "--delta", help="The Delta threshold of the algorithm", type=int, default=50
-    )
-    parser.add_argument(
-        "--p",
-        help="The factor for the computation of clip limits",
-        type=float,
-        default=1.5,
-    )
-    parser.add_argument(
-        "--show",
-        help="Display the 2 figures with matplotlib, before and after equalization",
-        action="store_true",
-    )
-    parser.add_argument(
-        "--out",
-        help="Output directory of the equalized image. Default folder is the ./images folder",
-        default="./out_dir/",
-        type=check_folder,
-    )
-    return parser.parse_args()
-
-
-def main(args):
-    image_name = "equalized_" + args.image.split(os.sep)[-1]
-    image = io.imread(args.image)
-    equalized_image = dual_gamma_clahe(
-        image.copy(),
-        block_size=args.kernel,
-        alpha=args.alpha,
-        delta=args.delta,
-        pi=args.p,
-        bins=256,
-    )
-
-    if args.show:
-        if image.ndim == 2:
-            cmap = "gray"
+def process_images(input_dir, output_dir, method, save_compare=False):
+    os.makedirs(output_dir, exist_ok=True)
+    results = []
+    img_extensions = ('.jpg', '.jpeg', '.png', '.bmp')
+    method_map = {
+        "dual_gamma_clahe": dual_gamma_clahe,
+        "proposed": proposed,
+        "clahe": clahe,
+        "he": he
+    }
+    for filename in os.listdir(input_dir):
+        if not filename.lower().endswith(img_extensions):
+            continue
+        img_path = os.path.join(input_dir, filename)
+        image = cv2.imread(img_path)
+        if image is None:
+            print(f"無法讀取圖片：{filename}")
+            continue
+        enhanced_dict = {}
+        if method == "all":
+            for m in ["dual_gamma_clahe", "proposed", "clahe", "he"]:
+                enhanced = method_map[m](image.copy())
+                out_name = f"{m}_{filename}"
+                out_path = os.path.join(output_dir, out_name)
+                cv2.imwrite(out_path, enhanced)
+                scores = evaluate_all(image, enhanced)
+                scores["Image"] = filename
+                scores["Method"] = m
+                results.append(scores)
+                enhanced_dict[m] = enhanced
         else:
-            cmap = None
-        fig, ax = plt.subplots(1, 2)
-        ax[0].imshow(image, cmap=cmap)
-        ax[1].imshow(equalized_image, cmap=cmap)
-        ax[0].set_title("Input Image")
-        ax[1].set_title("Equalized Image ")
-        plt.show()
+            enhanced = method_map[method](image.copy())
+            out_name = f"{method}_{filename}"
+            out_path = os.path.join(output_dir, out_name)
+            cv2.imwrite(out_path, enhanced)
+            scores = evaluate_all(image, enhanced)
+            scores["Image"] = filename
+            scores["Method"] = method
+            results.append(scores)
+            enhanced_dict[method] = enhanced
+        # 儲存比較圖
+        if save_compare:
+            original_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) if image.ndim == 3 else image
+            save_comparison_figure(original_gray, enhanced_dict, os.path.splitext(filename)[0], output_dir)
+    if not results:
+        print("沒有成功處理任何圖片，請檢查 images 資料夾是否有有效圖片。")
+        return
+    df = pd.DataFrame(results)
+    print(df[["Image", "Method", "TV", "AMBE", "EME", "CQE"]])
+    df.to_csv(os.path.join(output_dir, "results.csv"), index=False)
 
-    # Store image
-    io.imsave(os.path.join(args.out, image_name), equalized_image)
-
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--input_dir", default="images", help="Input images folder")
+    parser.add_argument("--output_dir", default="output", help="Output folder")
+    parser.add_argument("--method", default="all", choices=["dual_gamma_clahe", "proposed", "clahe", "he", "all"], help="Enhancement method")
+    parser.add_argument("--compare", action="store_true", help="Save comparison figure")
+    args = parser.parse_args()
+    process_images(args.input_dir, args.output_dir, args.method, args.compare)
 
 if __name__ == "__main__":
-    args = parse_arguments()
-    main(args)
+    main()
