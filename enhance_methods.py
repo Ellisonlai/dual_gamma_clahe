@@ -4,7 +4,13 @@ import numpy as np
 def calculate_tv(image: np.ndarray) -> float:
     dx = np.abs(np.diff(image.astype(float), axis=1))
     dy = np.abs(np.diff(image.astype(float), axis=0))
-    return float(np.sum(dx) + np.sum(dy)) / image.size
+    h,w = image.shape
+    if h > 1 and w > 1:
+        norm_factor = (h - 1) * (w - 1)
+    else:
+        norm_factor = h * w
+    return float(np.sum(dx) + np.sum(dy)) / norm_factor
+
 
 def calculate_ambe(original: np.ndarray, enhanced: np.ndarray) -> float:
     return float(abs(original.mean() - enhanced.mean())) / 255
