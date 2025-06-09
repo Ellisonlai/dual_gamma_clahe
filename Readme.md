@@ -6,7 +6,7 @@ This project implements and extends the algorithm from the paper:
 > [IEEE Xplore Link](https://ieeexplore.ieee.org/document/8269243)
 
 ---
-
+![Python](https://img.shields.io/badge/Python-3.8%2B-blue.svg)
 ## Features
 
 - **Dual Gamma CLAHE** (paper method, robust block-based, YUV/gray)
