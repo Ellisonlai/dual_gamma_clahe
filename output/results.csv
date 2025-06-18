@@ -1,0 +1,13 @@
+TV,AMBE,EME,Image,Method
+9.0382,0.3405,16.2108,Basketball.png,HE
+5.5961,0.1061,8.9157,Basketball.png,CLAHE
+2.6636,0.0618,13.1118,Basketball.png,The Reproduced 
+10.7197,0.0986,28.8952,building.jpg,HE
+15.1574,0.0052,19.9223,building.jpg,CLAHE
+10.3798,0.1157,11.7384,building.jpg,The Reproduced 
+17.5283,0.3078,20.4652,Car.JPG,HE
+8.8377,0.0417,17.0048,Car.JPG,CLAHE
+7.478,0.1349,8.1936,Car.JPG,The Reproduced 
+15.7823,0.2544,20.6456,Campus.JPG,HE
+9.7833,0.0385,17.4077,Campus.JPG,CLAHE
+6.8075,0.0775,7.2378,Campus.JPG,The Reproduced 
