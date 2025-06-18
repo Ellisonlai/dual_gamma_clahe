@@ -29,12 +29,6 @@ def calculate_eme(image: np.ndarray, k1=32, k2=32, c=1e-4) -> float:
                 eme += 20 * np.log10((Imax + c) / (Imin + c))
     return float(eme / (k1 * k2))
 
-def calculate_cqe(tv, ambe, eme, w1=0.3, w2=0.3, w3=0.4) -> float:
-    tv_score = 1 / (1 + tv)
-    ambe_score = 1 / (1 + ambe)
-    eme_score = eme / 100
-    return round(w1 * tv_score + w2 * ambe_score + w3 * eme_score, 4)
-
 def evaluate_all(original: np.ndarray, enhanced: np.ndarray):
     if original.ndim == 3:
         original = cv2.cvtColor(original, cv2.COLOR_BGR2GRAY)
@@ -43,12 +37,10 @@ def evaluate_all(original: np.ndarray, enhanced: np.ndarray):
     tv = calculate_tv(enhanced)
     ambe = calculate_ambe(original, enhanced)
     eme = calculate_eme(enhanced)
-    cqe = calculate_cqe(tv, ambe, eme)
     return {
         "TV": round(tv, 4),
         "AMBE": round(ambe, 4),
         "EME": round(eme, 4),
-        "CQE": round(cqe, 4),
     }
 
 def clahe(image: np.ndarray) -> np.ndarray:
