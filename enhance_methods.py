@@ -4,12 +4,18 @@ import numpy as np
 def calculate_tv(image: np.ndarray) -> float:
     dx = np.abs(np.diff(image.astype(float), axis=1))
     dy = np.abs(np.diff(image.astype(float), axis=0))
-    return float(np.sum(dx) + np.sum(dy)) / image.size
+    h,w = image.shape
+    if h > 1 and w > 1:
+        norm_factor = (h - 1) * (w - 1)
+    else:
+        norm_factor = h * w
+    return float(np.sum(dx) + np.sum(dy)) / norm_factor
+
 
 def calculate_ambe(original: np.ndarray, enhanced: np.ndarray) -> float:
-    return float(abs(original.mean() - enhanced.mean()))
+    return float(abs(original.mean() - enhanced.mean())) / 255
 
-def calculate_eme(image: np.ndarray, k1=8, k2=8, c=1e-5) -> float:
+def calculate_eme(image: np.ndarray, k1=32, k2=32, c=1e-4) -> float:
     h, w = image.shape
     block_h, block_w = h // k1, w // k2
     eme = 0
@@ -23,12 +29,6 @@ def calculate_eme(image: np.ndarray, k1=8, k2=8, c=1e-5) -> float:
                 eme += 20 * np.log10((Imax + c) / (Imin + c))
     return float(eme / (k1 * k2))
 
-def calculate_cqe(tv, ambe, eme, w1=0.3, w2=0.3, w3=0.4) -> float:
-    tv_score = 1 / (1 + tv)
-    ambe_score = 1 / (1 + ambe)
-    eme_score = eme / 100
-    return round(w1 * tv_score + w2 * ambe_score + w3 * eme_score, 4)
-
 def evaluate_all(original: np.ndarray, enhanced: np.ndarray):
     if original.ndim == 3:
         original = cv2.cvtColor(original, cv2.COLOR_BGR2GRAY)
@@ -37,12 +37,10 @@ def evaluate_all(original: np.ndarray, enhanced: np.ndarray):
     tv = calculate_tv(enhanced)
     ambe = calculate_ambe(original, enhanced)
     eme = calculate_eme(enhanced)
-    cqe = calculate_cqe(tv, ambe, eme)
     return {
         "TV": round(tv, 4),
         "AMBE": round(ambe, 4),
         "EME": round(eme, 4),
-        "CQE": round(cqe, 4),
     }
 
 def clahe(image: np.ndarray) -> np.ndarray:
@@ -73,4 +71,52 @@ def proposed(image: np.ndarray, gamma_dark: float = 0.7, gamma_bright: float = 1
     fused_uint8 = (fused * 255).astype(np.uint8)
     clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
     result = clahe.apply(fused_uint8)
+    return result
+
+def he_rgb(image: np.ndarray) -> np.ndarray:
+    """RGB version of histogram equalization using HSV V channel"""
+    if image.ndim != 3:
+        raise ValueError("Input image must be RGB (3 channels)")
+    
+    # Convert BGR to HSV
+    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    
+    # Apply histogram equalization to V channel
+    hsv[:, :, 2] = cv2.equalizeHist(hsv[:, :, 2])
+    
+    # Convert back to BGR
+    result = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
+    return result
+
+def clahe_rgb(image: np.ndarray, clipLimit: float = 2.0, tileGridSize: tuple = (32, 32)) -> np.ndarray:
+    """RGB version of CLAHE using HSV V channel"""
+    if image.ndim != 3:
+        raise ValueError("Input image must be RGB (3 channels)")
+    
+    # Convert BGR to HSV
+    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    
+    # Apply CLAHE to V channel
+    clahe_obj = cv2.createCLAHE(clipLimit=clipLimit, tileGridSize=tileGridSize)
+    hsv[:, :, 2] = clahe_obj.apply(hsv[:, :, 2])
+    
+    # Convert back to BGR
+    result = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
+    return result
+
+def clahe_rgb_all(image: np.ndarray, clipLimit: float = 2.0, tileGridSize: tuple = (32, 32)) -> np.ndarray:
+    """RGB version of CLAHE using all channels"""
+    if image.ndim != 3:
+        raise ValueError("Input image must be RGB (3 channels)")
+    
+    # Convert BGR to TFB (TensorFlow BGR to RGB)
+    tfb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    
+    # Apply CLAHE to each channel
+    clahe_obj = cv2.createCLAHE(clipLimit=clipLimit, tileGridSize=tileGridSize)
+    for i in range(3):
+        tfb[:, :, i] = clahe_obj.apply(tfb[:, :, i])
+    
+    # Convert back to BGR
+    result = cv2.cvtColor(tfb, cv2.COLOR_RGB2BGR)
     return result

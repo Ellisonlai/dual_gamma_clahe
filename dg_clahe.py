@@ -50,7 +50,7 @@ def compute_mn_factors(coords: tuple, index: int) -> float:
 def dual_gamma_clahe(
     image: np.ndarray,
     block_size: Union[int, List] = [32, 32],
-    alpha: float = 20,
+    alpha: float = 100,
     pi: float = 1.5,
     delta: float = 50,
     bins: int = 256,
